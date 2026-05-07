@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Waving Notation Paper — Depth</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background-color: #2d8a2d;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .layer {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+    }
+
+    #layer-far  { filter: drop-shadow(0px 2px 3.5px rgba(0,0,0,0.55)); }
+    #layer-mid  { filter: drop-shadow(0px 2px 1.8px rgba(0,0,0,0.45)); }
+    #layer-near { filter: drop-shadow(0px 1px 1.0px rgba(0,0,0,0.35)); }
+  </style>
+</head>
+<body>
+
+<!-- Back-to-front layer order -->
+<svg id="layer-far"  class="layer" xmlns="http://www.w3.org/2000/svg"></svg>
+<svg id="layer-mid"  class="layer" xmlns="http://www.w3.org/2000/svg"></svg>
+<svg id="layer-near" class="layer" xmlns="http://www.w3.org/2000/svg"></svg>
+
+<script>
+  let W = window.innerWidth;
+  let H = window.innerHeight;
+
+  const svgs = {
+    far:  document.getElementById('layer-far'),
+    mid:  document.getElementById('layer-mid'),
+    near: document.getElementById('layer-near'),
+  };
+
+  /*
+    SEAMLESS LOOP GUARANTEE
+    =======================
+    Each wave term is:  amp * sin(spatialFreq * px  +  phase(t))
+    where phase(t) = (t / CYCLE) * 2π * speed  +  phaseOffset
+
+    At t=0:   phase = phaseOffset
+    At t=CYCLE: phase = 2π * speed + phaseOffset
+
+    sin is 2π-periodic, so the wave returns to its t=0 shape if and only if
+    `speed` is an INTEGER.  Both speed1 and speed2 are integers → loop is
+    mathematically perfect regardless of phaseOffset values.
+  */
+  const layers = [
+    {
+      id:          'far',
+      cy:          0.32,        // highest — receding into distance
+      lineSpacing: 24,
+      lineWidth:   5.2,
+      opacity:     0.50,
+      amp:         40,
+      freq1:       1.4,         // spatial frequency, primary wave
+      speed1:      1,           // INTEGER — cycles per 60 s loop
+      amp2scale:   0.38,
+      freq2:       0.7,         // spatial frequency, secondary wave
+      speed2:      2,           // INTEGER — cycles per 60 s loop
+      phaseOff1:   0.00,
+      phaseOff2:   1.20,
+    },
+    {
+      id:          'mid',
+      cy:          0.50,        // middle ground
+      lineSpacing: 18,
+      lineWidth:   4.4,
+      opacity:     0.70,
+      amp:         27,
+      freq1:       1.9,
+      speed1:      2,
+      amp2scale:   0.28,
+      freq2:       1.1,
+      speed2:      3,
+      phaseOff1:   1.10,
+      phaseOff2:   2.50,
+    },
+    {
+      id:          'near',
+      cy:          0.72,        // lowest — closest to viewer
+      lineSpacing: 13,
+      lineWidth:   3.8,
+      opacity:     0.90,
+      amp:         18,
+      freq1:       2.5,
+      speed1:      3,
+      amp2scale:   0.20,
+      freq2:       1.4,
+      speed2:      5,
+      phaseOff1:   2.30,
+      phaseOff2:   0.70,
+    },
+  ];
+
+  const CYCLE   = 60;
+  const SAMPLES = 300;
+
+  const pathEls = {};
+
+  function initLayer(layer) {
+    const svgEl = svgs[layer.id];
+    svgEl.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    pathEls[layer.id] = [];
+    for (let li = 0; li < 5; li++) {
+      const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      p.setAttribute('fill', 'none');
+      p.setAttribute('stroke', 'white');
+      p.setAttribute('stroke-width', layer.lineWidth);
+      p.setAttribute('stroke-opacity', layer.opacity);
+      svgEl.appendChild(p);
+      pathEls[layer.id].push(p);
+    }
+  }
+
+  layers.forEach(initLayer);
+
+  function buildPath(layer, li, t) {
+    const cy = H * layer.cy + (li - 2) * layer.lineSpacing;
+
+    // phase1 advances by exactly speed1 full rotations over CYCLE seconds
+    const phase1 = (t / CYCLE) * Math.PI * 2 * layer.speed1 + layer.phaseOff1;
+    // phase2 advances by exactly speed2 full rotations over CYCLE seconds
+    const phase2 = (t / CYCLE) * Math.PI * 2 * layer.speed2 + layer.phaseOff2;
+
+    let d = '';
+    for (let i = 0; i <= SAMPLES; i++) {
+      const x  = (i / SAMPLES) * W;
+      const px = (i / SAMPLES) * Math.PI * 2;   // spatial variable 0..2π
+      const y  = cy
+        + layer.amp            * Math.sin(layer.freq1 * px + phase1)
+        + layer.amp * layer.amp2scale * Math.sin(layer.freq2 * px + phase2);
+      d += i === 0
+        ? `M ${x.toFixed(2)},${y.toFixed(2)}`
+        : ` L ${x.toFixed(2)},${y.toFixed(2)}`;
+    }
+    return d;
+  }
+
+  let startTs = null;
+
+  function animate(ts) {
+    if (!startTs) startTs = ts;
+    const t = ((ts - startTs) / 1000) % CYCLE;
+
+    layers.forEach(layer => {
+      for (let li = 0; li < 5; li++) {
+        pathEls[layer.id][li].setAttribute('d', buildPath(layer, li, t));
+      }
+    });
+
+    requestAnimationFrame(animate);
+  }
+
+  requestAnimationFrame(animate);
+
+  window.addEventListener('resize', () => {
+    W = window.innerWidth;
+    H = window.innerHeight;
+    Object.values(svgs).forEach(s => s.setAttribute('viewBox', `0 0 ${W} ${H}`));
+  });
+</script>
+</body>
+</html>
