@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kaleidoscope</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #020205; width: 100vw; height: 100vh; overflow: hidden; }
+    canvas { position: absolute; inset: 0; }
+  </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+
+  let W, H, cx, cy, R, maxDim;
+
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+    cx = W / 2; cy = H / 2;
+    R = Math.min(W, H) * 0.5;
+    maxDim = Math.max(W, H) * 1.2; 
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const SLICES = 12; // Retained from kaleidoscope.html
+  const WEDGE  = (Math.PI * 2) / SLICES;
+  const CYCLE  = 40; 
+
+  const nodes = Array.from({ length: 10 }, (_, i) => ({
+    r:      R * (0.15 + i * 0.1),        
+    speed:  0.02 + i * 0.012,             
+    phase:  (i / 10) * Math.PI * 2,
+    size:   40 + i * 15, 
+    hue:    (i / 10) * 360,
+  }));
+
+  function drawLensOverlay() {
+    const gradient = ctx.createRadialGradient(cx, cy, R * 0.4, cx, cy, maxDim);
+    gradient.addColorStop(0, 'rgba(0,0,0,0)');
+    gradient.addColorStop(1, 'rgba(0,0,0,0.85)');
+    ctx.fillStyle = gradient;
+    ctx.setTransform(1, 0, 0, 1, 0, 0); 
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  function drawScene(t) {
+    const pts = nodes.map(n => {
+      const a = n.phase + t * n.speed * Math.PI * 2;
+      return {
+        x:    n.r * Math.cos(a),
+        y:    n.r * Math.sin(a),
+        size: n.size,
+        hue:  (n.hue + t * 120) % 360,
+      };
+    });
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.globalCompositeOperation = 'screen';
+
+    for (let s = 0; s < SLICES; s++) {
+      ctx.save();
+      ctx.translate(cx, cy);
+
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, maxDim, s * WEDGE, (s + 1) * WEDGE);
+      ctx.lineTo(0,0);
+      ctx.clip();
+
+      ctx.rotate(s * WEDGE);
+      if (s % 2 === 1) ctx.scale(1, -1);
+
+      // 1. Draw "Filament" Connections (Sharper but thin)
+      ctx.lineWidth = 1.5;
+      for (let i = 0; i < pts.length; i++) {
+        for (let j = i + 1; j < pts.length; j++) {
+          const a = pts[i], b = pts[j];
+          const dist = Math.hypot(a.x - b.x, a.y - b.y);
+          if (dist < R * 1.2) {
+            const alpha = (1 - dist / (R * 1.2)) * 0.5;
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
+            ctx.strokeStyle = `hsla(${a.hue}, 80%, 75%, ${alpha})`;
+            ctx.stroke();
+          }
+        }
+      }
+
+      // 2. Draw Defined Cells
+      pts.forEach(p => {
+        // Soft outer glow - tight falloff
+        const glow = ctx.createRadialGradient(p.x, p.y, p.size * 0.5, p.x, p.y, p.size * 1.5);
+        glow.addColorStop(0, `hsla(${p.hue}, 80%, 60%, 0.4)`);
+        glow.addColorStop(1, `hsla(${p.hue}, 80%, 60%, 0)`);
+        
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * 1.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Solid core for "Shape"
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * 0.6, 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(${p.hue}, 90%, 70%, 0.8)`;
+        ctx.fill();
+
+        // Highlight/Nucleus
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * 0.15, 0, Math.PI * 2);
+        ctx.fillStyle = `#fff`;
+        ctx.fill();
+      });
+
+      ctx.restore();
+    }
+
+    ctx.globalCompositeOperation = 'source-over';
+    drawLensOverlay();
+  }
+
+  function frame(ts) {
+    const t = (ts / 1000) % CYCLE / CYCLE;
+    drawScene(t);
+    requestAnimationFrame(frame);
+  }
+
+  requestAnimationFrame(frame);
+</script>
+</body>
+</html>

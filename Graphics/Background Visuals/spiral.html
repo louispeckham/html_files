@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spiral</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #080810;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+    canvas { position: absolute; inset: 0; }
+  </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx    = canvas.getContext('2d');
+
+  let W, H, cx, cy, MAX_R;
+
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+    cx = W / 2;
+    cy = H / 2;
+    MAX_R = Math.min(W, H) * 0.46;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  /* ── single arm, 2 turns, very open ─────────────────────────────── */
+  const TURNS  = 2.2;
+  const POINTS = 600;
+  const CYCLE  = 40;   // seconds per full rotation
+
+  let startTs = null;
+
+  function draw(ts) {
+    if (!startTs) startTs = ts;
+    const t     = ((ts - startTs) / 1000 % CYCLE) / CYCLE; // 0..1
+    const angle = t * Math.PI * 2;                          // global rotation
+
+    ctx.clearRect(0, 0, W, H);
+
+    /* draw the single spiral arm as one continuous path with
+       lineWidth varying per-segment via individual strokes */
+    for (let i = 1; i <= POINTS; i++) {
+      const f0 = (i - 1) / POINTS;
+      const f1 =  i      / POINTS;
+
+      const r0 = f0 * MAX_R;
+      const r1 = f1 * MAX_R;
+      const a0 = angle + f0 * TURNS * Math.PI * 2;
+      const a1 = angle + f1 * TURNS * Math.PI * 2;
+
+      const x0 = cx + r0 * Math.cos(a0);
+      const y0 = cy + r0 * Math.sin(a0);
+      const x1 = cx + r1 * Math.cos(a1);
+      const y1 = cy + r1 * Math.sin(a1);
+
+      // Width: very thin at centre, broad at edge
+      const lw = 0.5 + f1 * f1 * 28;
+
+      // Colour: single cool-white hue, fading in from centre
+      const alpha = 0.04 + f1 * 0.55;
+
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.lineTo(x1, y1);
+      ctx.strokeStyle = `rgba(210, 220, 255, ${alpha.toFixed(3)})`;
+      ctx.lineWidth   = lw;
+      ctx.lineCap     = 'round';
+      ctx.stroke();
+    }
+
+    requestAnimationFrame(draw);
+  }
+
+  requestAnimationFrame(draw);
+</script>
+</body>
+</html>
