@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Parents' Evening Timer</title>
+  <style>
+    :root {
+      --fill-percent: 100; /* 100 = fully red, 0 = empty */
+    }
+
+    body {
+      font-family: Muli, sans-serif;
+      background: #111;
+      color: #eee;
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .red-overlay {
+      position: fixed;
+      inset: 0;
+      background: red;
+      transform-origin: bottom;
+      transform: scaleX(calc(var(--fill-percent) / 100));
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    h1 {
+      font-size: 6rem;
+      margin-bottom: 0.25rem;
+      text-align: center;
+      margin-top: 0;
+    }
+
+    #mainHeading1[contenteditable] {
+      outline: none;
+      cursor: text;
+      caret-color: #eee;
+      min-width: 75vw;
+      text-align: center;
+      display: block;
+    }
+
+
+
+    .time {
+      font-size: 5rem;
+      margin-bottom: 1rem;
+    }
+
+    .countdown {
+      font-size: 5rem;
+      margin-bottom: 1rem;
+    }
+
+    .label {
+      font-size: 3rem;
+      color: #aaa;
+      margin-bottom: 0.25rem;
+    }
+
+    #testChime {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      padding: 20px 40px;
+      font-size: 1.5rem;
+      border-radius: 10px;
+      border: none;
+      background: #444;
+      color: white;
+      cursor: pointer;
+      z-index: 1000;
+      opacity: 5%;
+    }
+
+    #settingsBtn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 10px;
+      font-size: 2.5rem;
+      border: none;
+      background: transparent;
+      color: #888;
+      cursor: pointer;
+      z-index: 1000;
+      opacity: 0.3;
+      transition: opacity 0.3s;
+    }
+
+    #settingsBtn:hover {
+      opacity: 1;
+    }
+
+    #fullscreenBtn {
+      position: fixed;
+      top: 20px;
+      right: 70px;
+      padding: 10px;
+      font-size: 2.5rem;
+      border: none;
+      background: transparent;
+      color: #888;
+      cursor: pointer;
+      z-index: 1000;
+      opacity: 0.3;
+      transition: opacity 0.3s;
+    }
+
+    #fullscreenBtn:hover {
+      opacity: 1;
+    }
+
+    .settings-panel {
+      position: fixed;
+      top: 0;
+      right: -400px;
+      width: 400px;
+      height: 100vh;
+      background: #222;
+      box-shadow: -2px 0 10px rgba(0,0,0,0.5);
+      z-index: 2000;
+      transition: right 0.3s ease;
+      padding: 30px;
+      box-sizing: border-box;
+      overflow-y: auto;
+    }
+
+    .settings-panel.open {
+      right: 0;
+    }
+
+    .settings-panel h2 {
+      margin-top: 0;
+      font-size: 2rem;
+      border-bottom: 2px solid #444;
+      padding-bottom: 15px;
+    }
+
+    .settings-group {
+      margin-bottom: 30px;
+    }
+
+    .settings-group label {
+      display: block;
+      font-size: 1.2rem;
+      margin-bottom: 10px;
+      color: #aaa;
+    }
+
+    .settings-group input[type="text"],
+    .settings-group input[type="number"] {
+      width: 100%;
+      padding: 12px;
+      font-size: 1.1rem;
+      border: 2px solid #444;
+      background: #333;
+      color: #eee;
+      border-radius: 5px;
+      box-sizing: border-box;
+    }
+
+    .settings-group input:focus {
+      outline: none;
+      border-color: #666;
+    }
+
+    .settings-group small {
+      display: block;
+      margin-top: 5px;
+      color: #888;
+      font-size: 0.9rem;
+    }
+
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 60px;
+      height: 30px;
+      background: #555;
+      border-radius: 15px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .toggle-switch.active {
+      background: #4CAF50;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 24px;
+      height: 24px;
+      background: white;
+      border-radius: 50%;
+      transition: left 0.3s;
+    }
+
+    .toggle-switch.active .toggle-slider {
+      left: 33px;
+    }
+
+    .volume-control {
+      margin-top: 10px;
+    }
+
+    .volume-slider {
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: #444;
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .volume-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #4CAF50;
+      cursor: pointer;
+    }
+
+    .volume-slider::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #4CAF50;
+      cursor: pointer;
+      border: none;
+    }
+
+    .volume-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      color: #888;
+      margin-top: 5px;
+    }
+
+    .settings-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 30px;
+    }
+
+    .settings-buttons button {
+      flex: 1;
+      padding: 15px;
+      font-size: 1.1rem;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .btn-save {
+      background: #4CAF50;
+      color: white;
+    }
+
+    .btn-save:hover {
+      background: #45a049;
+    }
+
+    .btn-cancel {
+      background: #666;
+      color: white;
+    }
+
+    .btn-cancel:hover {
+      background: #777;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 1500;
+      display: none;
+    }
+
+    .overlay.open {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="red-overlay"></div>
+  
+  <button id="fullscreenBtn">⛶</button>
+  <button id="settingsBtn">⚙️</button>
+  
+  <h1 id="mainHeading1" contenteditable="true" spellcheck="false" data-placeholder="Click to add title"></h1>
+  <h1 id="mainHeading2">Parents' Evening</h1>
+
+  <div class="label">Current time</div>
+  <div id="currentTime" class="time">--:--:--</div>
+
+  <div class="label">Next change</div>
+  <div id="countdown" class="countdown">00:00</div>
+
+  <button id="testChime">Test chime</button>
+
+  <div class="overlay" id="overlay"></div>
+  
+  <div class="settings-panel" id="settingsPanel">
+    <h2>Settings</h2>
+    
+    <div class="settings-group">
+      <label for="heading1Input">Heading Line 1</label>
+      <input type="text" id="heading1Input" placeholder="Enter first line">
+      <small>First line of the heading</small>
+    </div>
+    
+    <div class="settings-group">
+      <label for="heading2Input">Heading Line 2</label>
+      <input type="text" id="heading2Input" placeholder="Enter second line">
+      <small>Second line of the heading</small>
+    </div>
+    
+    <div class="settings-group">
+      <label for="intervalInput">Interval Length (minutes)</label>
+      <input type="number" id="intervalInput" min="1" max="60" step="1" placeholder="5">
+      <small>How long each interval should last (1-60 minutes)</small>
+    </div>
+    
+    <div class="settings-group">
+      <label for="startTimeInput">Start Offset (HH:MM)</label>
+      <input type="text" id="startTimeInput" placeholder="00:00" pattern="[0-2][0-9]:[0-5][0-9]">
+      <small>Time of day from which intervals are aligned (24-hour format)</small>
+    </div>
+    
+    <div class="settings-group">
+      <div class="toggle-container">
+        <label>Chime Sound</label>
+        <div class="toggle-switch" id="chimeToggle">
+          <div class="toggle-slider"></div>
+        </div>
+      </div>
+      <small>Play chime on interval</small>
+      <div class="volume-control" id="volumeControl">
+        <input type="range" min="0" max="100" value="100" class="volume-slider" id="volumeSlider">
+        <div class="volume-label">
+          <span>🔇</span>
+          <span id="volumePercent">100%</span>
+          <span>🔊</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="settings-group">
+      <button id="testSoundBtn" style="width: 100%; padding: 15px; font-size: 1.1rem; background: #555; color: white; border: none; border-radius: 5px; cursor: pointer;">🔔 Test Sound</button>
+      <small>Play the interval chime sound</small>
+    </div>
+    
+    <div class="settings-buttons">
+      <button class="btn-save" id="saveSettings">Save</button>
+      <button class="btn-cancel" id="cancelSettings">Cancel</button>
+    </div>
+  </div>
+
+  <audio id="chime" preload="auto"></audio>
+
+  <script>
+    // === CONFIGURATION (with localStorage persistence) ===
+    let INTERVAL_SECONDS = parseInt(localStorage.getItem('intervalSeconds')) || 300;
+    let INTERVAL_START_TIME = localStorage.getItem('intervalStartTime') || "00:00";
+    let EVENT_HEADING_1 = localStorage.getItem('eventHeading1') || "";
+    let EVENT_HEADING_2 = localStorage.getItem('eventHeading2') || "Parents' Evening";
+    let CHIME_ENABLED = localStorage.getItem('chimeEnabled') !== 'false'; // default true
+    let CHIME_VOLUME = parseFloat(localStorage.getItem('chimeVolume')) || 1.0; // 0.0 to 1.0
+
+    // === UTILS ===
+    function pad(n) {
+      return n < 10 ? "0" + n : "" + n;
+    }
+
+    function getStartOffsetSeconds() {
+      const parts = INTERVAL_START_TIME.split(":");
+      const h = parseInt(parts[0], 10) || 0;
+      const m = parseInt(parts[1], 10) || 0;
+      return h * 3600 + m * 60;
+    }
+
+    let START_OFFSET_SECONDS = getStartOffsetSeconds();
+    const DAY_SECONDS = 24 * 3600;
+
+    // === AUDIO / CHIME HANDLING ===
+    let audioCtx = null;
+
+    function getAudioContext() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      return audioCtx;
+    }
+
+    function playChime() {
+      try {
+        const ctx = getAudioContext();
+
+        if (ctx.state === 'suspended') {
+          ctx.resume();
+        }
+
+        ctx.resume().then(() => {
+          const now = ctx.currentTime;
+
+          // Ring 1: First strike (D6) - strongest
+          const osc1a = ctx.createOscillator();
+          const osc2a = ctx.createOscillator();
+          const gain1a = ctx.createGain();
+          const gain2a = ctx.createGain();
+
+          osc1a.type = "sine";
+          osc1a.frequency.setValueAtTime(1396.91, now);
+          osc2a.type = "sine";
+          osc2a.frequency.setValueAtTime(3771.657, now);
+
+          gain1a.gain.setValueAtTime(0, now);
+          gain1a.gain.linearRampToValueAtTime(0.4 * CHIME_VOLUME, now + 0.01);
+          gain1a.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+
+          gain2a.gain.setValueAtTime(0, now);
+          gain2a.gain.linearRampToValueAtTime(0.15 * CHIME_VOLUME, now + 0.01);
+          gain2a.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+
+          osc1a.connect(gain1a);
+          osc2a.connect(gain2a);
+          gain1a.connect(ctx.destination);
+          gain2a.connect(ctx.destination);
+
+          osc1a.start(now);
+          osc2a.start(now);
+          osc1a.stop(now + 0.7);
+          osc2a.stop(now + 0.7);
+
+          // Ring 2: Second strike (D6) - 0.12s after first
+          const osc1b = ctx.createOscillator();
+          const osc2b = ctx.createOscillator();
+          const gain1b = ctx.createGain();
+          const gain2b = ctx.createGain();
+
+          osc1b.type = "sine";
+          osc1b.frequency.setValueAtTime(1396.91, now + 0.12);
+          osc2b.type = "sine";
+          osc2b.frequency.setValueAtTime(3771.657, now + 0.12);
+
+          gain1b.gain.setValueAtTime(0, now + 0.12);
+          gain1b.gain.linearRampToValueAtTime(0.35 * CHIME_VOLUME, now + 0.13);
+          gain1b.gain.exponentialRampToValueAtTime(0.001, now + 0.82);
+
+          gain2b.gain.setValueAtTime(0, now + 0.12);
+          gain2b.gain.linearRampToValueAtTime(0.12 * CHIME_VOLUME, now + 0.13);
+          gain2b.gain.exponentialRampToValueAtTime(0.001, now + 0.62);
+
+          osc1b.connect(gain1b);
+          osc2b.connect(gain2b);
+          gain1b.connect(ctx.destination);
+          gain2b.connect(ctx.destination);
+
+          osc1b.start(now + 0.12);
+          osc2b.start(now + 0.12);
+          osc1b.stop(now + 0.82);
+          osc2b.stop(now + 0.82);
+
+          // Ring 3: Third strike (D6) - 0.22s after first, softest
+          const osc1c = ctx.createOscillator();
+          const osc2c = ctx.createOscillator();
+          const gain1c = ctx.createGain();
+          const gain2c = ctx.createGain();
+
+          osc1c.type = "sine";
+          osc1c.frequency.setValueAtTime(1396.91, now + 0.22);
+          osc2c.type = "sine";
+          osc2c.frequency.setValueAtTime(3771.657, now + 0.22);
+
+          gain1c.gain.setValueAtTime(0, now + 0.22);
+          gain1c.gain.linearRampToValueAtTime(0.28 * CHIME_VOLUME, now + 0.23);
+          gain1c.gain.exponentialRampToValueAtTime(0.001, now + 0.92);
+
+          gain2c.gain.setValueAtTime(0, now + 0.22);
+          gain2c.gain.linearRampToValueAtTime(0.1 * CHIME_VOLUME, now + 0.23);
+          gain2c.gain.exponentialRampToValueAtTime(0.001, now + 0.72);
+
+          osc1c.connect(gain1c);
+          osc2c.connect(gain2c);
+          gain1c.connect(ctx.destination);
+          gain2c.connect(ctx.destination);
+
+          osc1c.start(now + 0.22);
+          osc2c.start(now + 0.22);
+          osc1c.stop(now + 0.92);
+          osc2c.stop(now + 0.92);
+        }).catch(e => console.log("Audio init failed:", e));
+      } catch (e) {
+        console.log("Chime failed:", e);
+      }
+    }
+
+    // === SETTINGS PANEL ===
+    document.addEventListener("DOMContentLoaded", () => {
+      const settingsBtn = document.getElementById("settingsBtn");
+      const fullscreenBtn = document.getElementById("fullscreenBtn");
+      const settingsPanel = document.getElementById("settingsPanel");
+      const overlay = document.getElementById("overlay");
+      const saveBtn = document.getElementById("saveSettings");
+      const cancelBtn = document.getElementById("cancelSettings");
+      const heading1Input = document.getElementById("heading1Input");
+      const heading2Input = document.getElementById("heading2Input");
+      const intervalInput = document.getElementById("intervalInput");
+      const startTimeInput = document.getElementById("startTimeInput");
+      const chimeToggle = document.getElementById("chimeToggle");
+      const volumeSlider = document.getElementById("volumeSlider");
+      const volumePercent = document.getElementById("volumePercent");
+      const volumeControl = document.getElementById("volumeControl");
+      const mainHeading1 = document.getElementById("mainHeading1");
+      const mainHeading2 = document.getElementById("mainHeading2");
+
+      // Initialize display
+      mainHeading2.textContent = EVENT_HEADING_2;
+      mainHeading1.textContent = EVENT_HEADING_1;
+
+      function setHeading1(text) {
+        mainHeading1.textContent = text;
+      }
+
+      // Inline editing of heading 1
+      mainHeading1.addEventListener("blur", () => {
+        if (mainHeading1.innerHTML === '<br>' || mainHeading1.innerHTML === '<br/>') {
+          mainHeading1.innerHTML = '';
+        }
+        // Clear temp space if user clicked away without typing
+        if (headingHasTempSpace) {
+          headingHasTempSpace = false;
+          mainHeading1.textContent = '';
+        }
+        const newVal = mainHeading1.textContent.trim();
+        EVENT_HEADING_1 = newVal;
+        localStorage.setItem('eventHeading1', EVENT_HEADING_1);
+      });
+
+      // When empty, clicking left-aligns the caret by default.
+      // Fix: insert a temp nbsp to anchor the caret centrally, remove it once real text is typed.
+      let headingHasTempSpace = false;
+
+      mainHeading1.addEventListener("click", () => {
+        if (mainHeading1.textContent === '' && !headingHasTempSpace) {
+          headingHasTempSpace = true;
+          mainHeading1.textContent = '\u00a0';
+          // Place caret at start of the nbsp (which renders centred)
+          const sel = window.getSelection();
+          const range = document.createRange();
+          range.setStart(mainHeading1.firstChild, 0);
+          range.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+      });
+
+      mainHeading1.addEventListener("keydown", (e) => {
+        if (headingHasTempSpace && e.key !== 'Enter') {
+          // Remove the temp space before the real character lands
+          headingHasTempSpace = false;
+          mainHeading1.textContent = '';
+        }
+      });
+
+      // Prevent newlines in the heading (Enter blurs instead)
+      mainHeading1.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          headingHasTempSpace = false;
+          mainHeading1.blur();
+        }
+      });
+
+      // Fullscreen functionality
+      fullscreenBtn.addEventListener("click", () => {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(err => {
+            console.log("Error attempting to enable fullscreen:", err);
+          });
+        } else {
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+          }
+        }
+      });
+
+      // Update volume display and control visibility
+      function updateVolumeDisplay() {
+        const isEnabled = chimeToggle.classList.contains('active');
+        volumeControl.style.opacity = isEnabled ? '1' : '0.5';
+        volumeControl.style.pointerEvents = isEnabled ? 'auto' : 'none';
+        volumePercent.textContent = volumeSlider.value + '%';
+      }
+
+      function openSettings() {
+        heading1Input.value = mainHeading1.textContent.replace(/\u200b/g, '').trim();
+        heading2Input.value = EVENT_HEADING_2;
+        intervalInput.value = INTERVAL_SECONDS / 60;
+        startTimeInput.value = INTERVAL_START_TIME;
+        volumeSlider.value = Math.round(CHIME_VOLUME * 100);
+        if (CHIME_ENABLED) {
+          chimeToggle.classList.add('active');
+        } else {
+          chimeToggle.classList.remove('active');
+        }
+        updateVolumeDisplay();
+        settingsPanel.classList.add("open");
+        overlay.classList.add("open");
+      }
+
+      function closeSettings() {
+        settingsPanel.classList.remove("open");
+        overlay.classList.remove("open");
+      }
+
+      settingsBtn.addEventListener("click", openSettings);
+      overlay.addEventListener("click", closeSettings);
+      cancelBtn.addEventListener("click", closeSettings);
+
+      // Chime toggle
+      chimeToggle.addEventListener("click", () => {
+        chimeToggle.classList.toggle('active');
+        updateVolumeDisplay();
+      });
+
+      // Volume slider
+      volumeSlider.addEventListener("input", () => {
+        CHIME_VOLUME = volumeSlider.value / 100;
+        updateVolumeDisplay();
+      });
+
+      // Test sound button in settings panel
+      const testSoundBtn = document.getElementById("testSoundBtn");
+      if (testSoundBtn) {
+        testSoundBtn.addEventListener("click", () => {
+          playChime();
+        });
+      }
+
+      saveBtn.addEventListener("click", () => {
+        // Validate and save heading line 1
+        const newHeading1 = heading1Input.value.trim();
+        if (newHeading1 !== null) {
+          EVENT_HEADING_1 = newHeading1;
+          localStorage.setItem('eventHeading1', EVENT_HEADING_1);
+          setHeading1(EVENT_HEADING_1);
+        }
+
+        // Validate and save heading line 2
+        const newHeading2 = heading2Input.value.trim();
+        if (newHeading2) {
+          EVENT_HEADING_2 = newHeading2;
+          localStorage.setItem('eventHeading2', EVENT_HEADING_2);
+          mainHeading2.textContent = EVENT_HEADING_2;
+        }
+
+        // Validate and save interval
+        const newInterval = parseInt(intervalInput.value);
+        if (newInterval >= 1 && newInterval <= 60) {
+          INTERVAL_SECONDS = newInterval * 60;
+          localStorage.setItem('intervalSeconds', INTERVAL_SECONDS);
+        }
+
+        // Validate and save start time
+        const timePattern = /^([0-1]?[0-9]|2[0-3]):([0-5][0-9])$/;
+        const newStartTime = startTimeInput.value.trim();
+        if (timePattern.test(newStartTime)) {
+          INTERVAL_START_TIME = newStartTime;
+          localStorage.setItem('intervalStartTime', INTERVAL_START_TIME);
+          START_OFFSET_SECONDS = getStartOffsetSeconds();
+        }
+
+        // Save chime enabled state
+        CHIME_ENABLED = chimeToggle.classList.contains('active');
+        localStorage.setItem('chimeEnabled', CHIME_ENABLED);
+
+        // Save volume
+        CHIME_VOLUME = volumeSlider.value / 100;
+        localStorage.setItem('chimeVolume', CHIME_VOLUME);
+
+        closeSettings();
+      });
+
+      // Test chime button
+      const testBtn = document.getElementById("testChime");
+      if (testBtn) {
+        testBtn.addEventListener("click", () => {
+          playChime();
+        });
+      }
+    });
+
+    // === INTERVAL / DISPLAY LOGIC ===
+    let lastIntervalIndex = null;
+
+    function updateClock() {
+      const now = new Date();
+
+      const currentEl = document.getElementById("currentTime");
+      const countdownEl = document.getElementById("countdown");
+      if (!currentEl || !countdownEl) {
+        return;
+      }
+
+      // 1) Current time display
+      const h = pad(now.getHours());
+      const m = pad(now.getMinutes());
+      const s = pad(now.getSeconds());
+      currentEl.textContent = h + ":" + m + ":" + s;
+
+      // 2) Compute "seconds since midnight"
+      const secondsSinceMidnight =
+        now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+
+      // 3) Shift so INTERVAL_START_TIME becomes zero
+      let shifted = secondsSinceMidnight - START_OFFSET_SECONDS;
+      shifted = ((shifted % DAY_SECONDS) + DAY_SECONDS) % DAY_SECONDS;
+
+      // 4) Current interval index and progress
+      const currentIntervalIndex = Math.floor(shifted / INTERVAL_SECONDS);
+      const intervalStartShifted = currentIntervalIndex * INTERVAL_SECONDS;
+      const elapsedInInterval = shifted - intervalStartShifted;
+      const remainingInInterval = INTERVAL_SECONDS - elapsedInInterval;
+
+      // 5) Chime when interval index changes (boundary crossed)
+      if (lastIntervalIndex !== null && currentIntervalIndex !== lastIntervalIndex) {
+        if (CHIME_ENABLED) {
+          playChime();
+        }
+      }
+      lastIntervalIndex = currentIntervalIndex;
+
+      // 6) Countdown display to next interval boundary
+      const cdTotalSeconds = Math.max(0, Math.floor(remainingInInterval));
+      const cdMinutes = Math.floor(cdTotalSeconds / 60);
+      const cdSeconds = cdTotalSeconds % 60;
+      countdownEl.textContent = pad(cdMinutes) + ":" + pad(cdSeconds);
+
+      // 7) Red overlay fill based on fraction elapsed in this interval
+      const fractionElapsed = elapsedInInterval / INTERVAL_SECONDS;
+      const fillPercent = 100 - Math.max(0, Math.min(1, fractionElapsed)) * 100;
+
+      document.documentElement.style.setProperty(
+        "--fill-percent",
+        Math.max(0, Math.min(100, fillPercent))
+      );
+    }
+
+    updateClock();
+    setInterval(updateClock, 1000);
+  </script>
+</body>
+</html>
