@@ -31,7 +31,7 @@ White musical symbols (♩ ♪ ♫ ♬ 𝄞 ♭ and more) drift left-to-right ac
 ### [`notation_paper.html`](https://louispeckham.github.io/html_files/Graphics/Background%20Visuals/notation_paper.html)
 Three layered sets of animated staff lines wave across the screen in parallax, simulating sheets of manuscript paper receding into the distance. Each layer has its own wave frequency, amplitude, opacity, and speed, creating a convincing sense of depth.
  
-- **Layers:** 3 (far, mid, near) × 5 lines each — 15 lines total
+- **Layers:** 3 (far, mid, near)
 - **Style:** Elegant, music-themed — suits choir, band, or music lesson contexts
 - **Background:** Solid green (`#2d8a2d`) — pairs naturally with [`musical_notes.html`](https://louispeckham.github.io/html_files/Graphics/Background%20Visuals/musical_notes.html)
 - **Loop:** 60-second seamless cycle
