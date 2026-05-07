@@ -36,12 +36,6 @@ A countdown timer and interval chime tool for parents' evenings and similar time
   - Toggle chime on/off and adjust volume
 - Click **⛶** to enter fullscreen mode
 - All settings persist via `localStorage` — no need to reconfigure on reload
-- Heading line 1 is also **inline-editable** by clicking directly on it
+- Heading line 1 is also **inline-editable** by clicking directly on it, so that you can easily change the year group/classes.
 
 ---
-
-## Usage
-
-Open either file directly in a browser — no server required. For a presentation display, use fullscreen mode (F11 or the ⛶ button) and consider projecting onto a second screen.
-
-> **Tip for Parents' Evening Timer:** set the *Start Offset* to the actual start time of your event (e.g. `15:30`) so interval boundaries align exactly with your appointment schedule from the very first slot.
