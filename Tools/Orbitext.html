@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Orbitals</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: black;
+      font-family: Arial, sans-serif;
+      height: 100vh;
+      color: white;
+    }
+
+    #center-wrapper {
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 100;
+      display: inline-block;
+      pointer-events: auto;
+    }
+
+    #center-text {
+      font-size: 48px;
+      font-weight: bold;
+      color: #ffffff;
+      text-shadow: 2px 2px 8px rgba(255,215,0,0.5);
+      text-align: center;
+      font-family: Georgia, serif;
+      cursor: default;
+      user-select: none;
+      white-space: pre-wrap;
+    }
+
+    #center-text.editing {
+      outline: 2px dashed #222222;
+      outline-offset: 4px;
+      user-select: text;
+      cursor: text;
+    }
+
+    #edit-title-button {
+      position: absolute;
+      right: 0;
+      bottom: -6px;
+      transform: translateY(100%);
+      font-size: 14px;
+      padding: 2px 6px;
+      border-radius: 6px;
+      border: 1px solid rgba(160,160,160,0.6);
+      background: rgba(20,20,20,0.55);
+      color: #ddd;
+      cursor: pointer;
+      opacity: 0.6;
+    }
+
+    .planet {
+      position: fixed;
+      font-size: 20px;
+      font-weight: bold;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+      pointer-events: none;
+      animation-name: circle-orbit;
+      animation-timing-function: linear;
+      animation-iteration-count: infinite;
+    }
+    @keyframes circle-orbit {
+      0% {
+        transform: rotate(0deg) translateX(var(--radius)) rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg) translateX(var(--radius)) rotate(-360deg);
+      }
+    }
+
+    #input-overlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(2px);
+      z-index: 200;
+    }
+    #input-box {
+      padding: 12px 16px;
+      font-size: 20px;
+      border-radius: 8px;
+      border: 2px solid #222222;
+      background: #111;
+      color: #fff;
+      min-width: 260px;
+      outline: none;
+    }
+
+    #hint {
+      position: fixed;
+      left: 50%;
+      bottom: 16px;
+      transform: translateX(-50%);
+      font-size: 14px;
+      color: #999;
+    }
+
+    #list-icon {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 150;
+    }
+    #list-icon-lines {
+      width: 60%;
+      height: 60%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .list-line {
+      height: 2px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.7);
+    }
+
+    #planet-editor {
+      position: fixed;
+      right: 16px;
+      bottom: 56px;
+      width: 260px;
+      max-height: 70vh;
+      background: rgba(15,15,15,0.96);
+      border-radius: 10px;
+      border: 1px solid #333;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+      padding: 10px 10px 6px;
+      color: #eee;
+      font-size: 14px;
+      display: none;
+      z-index: 180;
+      backdrop-filter: blur(6px);
+      box-sizing: border-box;
+    }
+    #planet-editor-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+      font-size: 13px;
+      color: #aaa;
+    }
+    #planet-editor-title {
+      font-weight: bold;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+    #planet-editor-close {
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid #444;
+      font-size: 11px;
+      color: #ccc;
+    }
+    #planet-editor-tools {
+      width: 100%;
+      display: flex;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+    .tool-button {
+      flex: 1;
+      cursor: pointer;
+      border-radius: 4px;
+      border: 1px solid #555;
+      padding: 3px 4px;
+      font-size: 11px;
+      color: #eee;
+      background: #222;
+      text-align: center;
+    }
+    #planet-list {
+      max-height: 34vh;
+      overflow-y: auto;
+      padding-right: 2px;
+      margin-bottom: 6px;
+    }
+    .planet-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .planet-input {
+      flex: 1;
+      padding: 4px 6px;
+      font-size: 13px;
+      border-radius: 4px;
+      border: 1px solid #444;
+      background: #111;
+      color: #f5f5f5;
+      outline: none;
+    }
+    .planet-delete {
+      cursor: pointer;
+      border-radius: 4px;
+      border: 1px solid #555;
+      padding: 2px 6px;
+      font-size: 11px;
+      color: #f88;
+      background: #200;
+    }
+    #planet-add-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      border-top: 1px solid #333;
+      padding-top: 6px;
+      margin-top: 2px;
+    }
+    #planet-add-input {
+      flex: 1;
+      padding: 4px 6px;
+      font-size: 13px;
+      border-radius: 4px;
+      border: 1px solid #444;
+      background: #111;
+      color: #f5f5f5;
+      outline: none;
+    }
+    #planet-add-button {
+      cursor: pointer;
+      border-radius: 4px;
+      border: 1px solid #4caf50;
+      padding: 2px 8px;
+      font-size: 13px;
+      color: #c8facc;
+      background: #1b3b1d;
+    }
+    #clear-all-planets {
+      width: 100%;
+      cursor: pointer;
+      border-radius: 4px;
+      border: 1px solid #a52222;
+      padding: 4px 4px;
+      font-size: 12px;
+      text-align: center;
+      color: #f88;
+      background: #200;
+      margin-top: 6px;
+    }
+    #planet-import-file {
+      display: none;
+    }
+    /* Starscape: parallax background layers */
+
+    .starscape {
+      background:
+        radial-gradient(circle at 50% 50%, #000210 0%, #000000 100%);
+    }
+
+    /* Starscape: parallax background layers */
+
+    .starscape {
+      background:
+        radial-gradient(circle at 50% 50%, #000210 0%, #000000 100%);
+    }
+
+    /* Star layer 1 — near, slow drift */
+    .starscape::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: -1;
+      opacity: 0.75;
+
+      background:
+        radial-gradient(1px 1px at 11% 15%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 23% 18%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 34% 12%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 44% 22%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 52% 14%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 63% 28%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 74% 19%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 85% 24%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 18% 32%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 27% 36%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 39% 35%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 49% 38%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 61% 31%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 72% 43%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 84% 37%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 91% 42%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 14% 48%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 28% 53%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 41% 47%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 54% 52%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 67% 45%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 79% 57%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 89% 54%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 17% 64%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 29% 68%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 40% 62%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 52% 71%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 65% 66%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 77% 72%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 88% 68%,  #ffffff 100%, transparent 0);
+
+      background-size: 100% 100%;
+      transform: translate(-10px, -10px);
+      animation: parallax-stars 60s linear infinite;
+    }
+
+    /* Star layer 2 — far, faster drift */
+    .starscape::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: -2;
+      opacity: 0.5;
+
+      background:
+        radial-gradient(1px 1px at 5%  95%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 12% 88%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 21% 92%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 30% 85%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 38% 90%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 47% 83%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 55% 89%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 64% 81%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 73% 93%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 82% 86%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 90% 91%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 95% 78%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 14% 73%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 23% 77%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 33% 68%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 42% 75%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 51% 69%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 60% 72%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 71% 65%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 80% 70%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 88% 63%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 94% 58%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 16% 52%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 26% 56%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 35% 49%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 45% 54%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 56% 48%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 67% 53%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 78% 47%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 87% 51%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 19% 38%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 28% 43%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 39% 36%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 50% 42%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 62% 34%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 73% 39%,  #ffffff 100%, transparent 0),
+        radial-gradient(1px 1px at 84% 33%,  #ffffff 100%, transparent 0);
+
+      background-size: 100% 100%;
+      transform: translate(-5px, -5px);
+      animation: parallax-stars 40s linear infinite;
+    }
+
+    @keyframes parallax-stars {
+      0% {
+        transform: translate(-50px, -50px);
+      }
+      100% {
+        transform: translate(50px, 50px);
+      }
+    }
+
+  </style>
+</head>
+<body>
+
+<style id="starscape-style"></style>
+
+<div id="center-wrapper">
+  <div id="center-text">Title</div>
+  <button id="edit-title-button" title="Edit title">✎</button>
+</div>
+
+<div id="input-overlay">
+  <input id="input-box" type="text" placeholder="Type a word and press Enter">
+</div>
+
+<div id="hint">
+  Press Enter to add a word to the orbit.
+  Use ✎ to edit the title (Shift+Enter for new lines).
+</div>
+
+<div id="list-icon" title="Edit orbiting words">
+  <div id="list-icon-lines">
+    <div class="list-line"></div>
+    <div class="list-line"></div>
+    <div class="list-line"></div>
+  </div>
+</div>
+
+<div id="planet-editor">
+  <div id="planet-editor-header">
+    <div id="planet-editor-title">Orbiting words</div>
+    <div id="planet-editor-close">Close</div>
+  </div>
+
+  <div id="planet-editor-tools">
+    <button id="planet-export-button" class="tool-button">Export CSV</button>
+    <button id="planet-import-button" class="tool-button">Import CSV</button>
+    <input id="planet-import-file" type="file" accept=".csv,text/csv">
+    <button id="toggle-starscape" class="tool-button"
+            style="border-color: #8888ff; color: #ddddff; background: #111133;">
+      Starscape: Off
+    </button>
+  </div>
+
+  <div id="planet-list"></div>
+
+  <button id="clear-all-planets" class="tool-button"
+          style="background: #200; border-color: #a52222; color: #f88; padding: 4px 4px; font-size: 12px;">
+    Clear All
+  </button>
+
+  <div id="planet-add-row">
+    <input id="planet-add-input" type="text" placeholder="Add new word and press Enter">
+    <button id="planet-add-button">+</button>
+  </div>
+</div>
+
+<script>
+  const planets = [];
+  let planetCounter = 0;
+
+  const centerX = () => window.innerWidth / 2;
+  const centerY = () => window.innerHeight / 2;
+
+  function randomColor() {
+    const colors = [
+      "#ff6b6b","#4ecdc4","#45b7d1","#f9ca24","#6c5ce7","#fd79a8",
+      "#00b894","#e17055","#74b9ff","#a29bfe","#fdcb6e","#00cec9",
+      "#0984e3","#e84393","#8e44ad","#f368e0","#1e90ff","#ff9ff3",
+      "#55a3ff","#ffa502","#c44569","#0bdaa5","#f18f01","#c0392b",
+      "#7f8c8d","#3498db","#e67e22","#2ed573","#ff3838","#40e0d0",
+      "#9966cc"
+    ];
+    return colors[Math.floor(Math.random() * colors.length)];
+  }
+
+  function addPlanet(text) {
+    if (!text.trim()) return;
+
+    const div = document.createElement('div');
+    div.className = 'planet';
+    div.textContent = text.trim();
+
+    const radius = 180 + Math.random() * 260;
+    const duration = 16 + Math.random() * 36;
+    const delay = -Math.random() * duration;
+    const direction = Math.random() < 0.5 ? 'normal' : 'reverse';
+    const color = randomColor();
+
+    div.style.setProperty('--radius', radius + 'px');
+    div.style.animationDuration = duration + 's';
+    div.style.animationDelay = delay + 's';
+    div.style.animationDirection = direction;
+    div.style.color = color;
+
+    div.style.left = (centerX() - 10) + 'px';
+    div.style.top = (centerY() - 10) + 'px';
+
+    document.body.appendChild(div);
+
+    const id = ++planetCounter;
+    planets.push({ div, id });
+    rebuildPlanetList();
+  }
+
+  function clearAllPlanets() {
+    planets.forEach(({ div }) => div.remove());
+    planets.length = 0;
+    rebuildPlanetList();
+  }
+
+  function repositionPlanets() {
+    planets.forEach(({ div }) => {
+      div.style.left = (centerX() - 10) + 'px';
+      div.style.top = (centerY() - 10) + 'px';
+    });
+  }
+
+  window.addEventListener('resize', repositionPlanets);
+
+  const overlay = document.getElementById('input-overlay');
+  const inputBox = document.getElementById('input-box');
+  const centerTitle = document.getElementById('center-text');
+  const editTitleButton = document.getElementById('edit-title-button');
+
+  function openInputOverlay() {
+    overlay.style.display = 'flex';
+    inputBox.value = '';
+    inputBox.focus();
+    document.body.focus();
+  }
+
+  function startTitleEdit() {
+    centerTitle.contentEditable = 'true';
+    centerTitle.classList.add('editing');
+    const range = document.createRange();
+    range.selectNodeContents(centerTitle);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    centerTitle.focus();
+  }
+
+  function stopTitleEdit() {
+    centerTitle.contentEditable = 'false';
+    centerTitle.classList.remove('editing');
+    window.getSelection().removeAllRanges();
+  }
+
+  editTitleButton.addEventListener('click', (e) => {
+    e.stopPropagation();
+    startTitleEdit();
+  });
+
+  centerTitle.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      stopTitleEdit();
+    }
+  });
+
+  inputBox.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addPlanet(inputBox.value);
+      overlay.style.display = 'none';
+      document.body.focus();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      overlay.style.display = 'none';
+      document.body.focus();
+    }
+  });
+
+  const listIcon = document.getElementById('list-icon');
+  const planetEditor = document.getElementById('planet-editor');
+  const planetList = document.getElementById('planet-list');
+  const planetEditorClose = document.getElementById('planet-editor-close');
+  const planetAddInput = document.getElementById('planet-add-input');
+  const planetAddButton = document.getElementById('planet-add-button');
+  const planetExportButton = document.getElementById('planet-export-button');
+  const planetImportButton = document.getElementById('planet-import-button');
+  const planetImportFile = document.getElementById('planet-import-file');
+  const clearAllButton = document.getElementById('clear-all-planets');
+
+  function rebuildPlanetList() {
+    planetList.innerHTML = '';
+    planets.forEach(({ div, id }) => {
+      const row = document.createElement('div');
+      row.className = 'planet-row';
+      row.dataset.id = id;
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = div.textContent;
+      input.className = 'planet-input';
+
+      input.addEventListener('input', () => {
+        div.textContent = input.value;
+      });
+
+      const del = document.createElement('button');
+      del.textContent = '✕';
+      del.className = 'planet-delete';
+      del.addEventListener('click', () => {
+        div.remove();
+        const index = planets.findIndex(p => p.id === id);
+        if (index !== -1) {
+          planets.splice(index, 1);
+        }
+        rebuildPlanetList();
+      });
+
+      row.appendChild(input);
+      row.appendChild(del);
+      planetList.appendChild(row);
+    });
+  }
+
+  function openEditor() {
+    rebuildPlanetList();
+    planetEditor.style.display = 'block';
+    setTimeout(() => planetAddInput.focus(), 0);
+  }
+
+  function closeEditor() {
+    planetEditor.style.display = 'none';
+  }
+
+  listIcon.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (planetEditor.style.display === 'block') {
+      closeEditor();
+    } else {
+      openEditor();
+    }
+  });
+
+  planetEditorClose.addEventListener('click', (e) => {
+    e.stopPropagation();
+    closeEditor();
+  });
+
+  function exportPlanetsToCSV() {
+    const lines = planets.map(({ div }) => `"${div.textContent.replace(/"/g, '""')}"`);
+    const csvContent = lines.join("\r\n") + "\r\n";
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "planets.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  planetExportButton.addEventListener("click", (e) => {
+    e.stopPropagation();
+    exportPlanetsToCSV();
+  });
+
+  function importPlanetsFromCSV(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target.result;
+      const lines = text.split(/\r?\n/);
+
+      clearAllPlanets();
+
+      lines.forEach((line) => {
+        const trimmed = line.trim();
+        if (!trimmed) return;
+
+        let value = trimmed;
+        if (value.startsWith('"') && value.endsWith('"')) {
+          value = value.slice(1, -1).replace(/""/g, '"');
+        }
+        addPlanet(value);
+      });
+    };
+    reader.readAsText(file);
+  }
+
+  planetImportButton.addEventListener("click", (e) => {
+    e.stopPropagation();
+    planetImportFile.value = "";
+    planetImportFile.click();
+  });
+
+  planetImportFile.addEventListener("change", (e) => {
+    if (e.target.files.length > 0) {
+      importPlanetsFromCSV(e.target.files[0]);
+    }
+  });
+
+  planetAddButton.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (planetAddInput.value.trim()) {
+      addPlanet(planetAddInput.value.trim());
+      planetAddInput.value = '';
+      planetAddInput.focus();
+    }
+  });
+
+  planetAddInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (planetAddInput.value.trim()) {
+        addPlanet(planetAddInput.value.trim());
+        planetAddInput.value = '';
+      }
+    }
+  });
+
+  clearAllButton.addEventListener("click", (e) => {
+    e.stopPropagation();
+    clearAllPlanets();
+  });
+
+  // Open the add‑planet overlay when pressing Enter anywhere
+  window.addEventListener('keydown', (e) => {
+    if (!planetEditor.contains(document.activeElement) &&
+      !overlay.contains(document.activeElement) &&
+      e.key === 'Enter' &&
+      !e.shiftKey &&
+      !e.ctrlKey &&
+      !e.altKey &&
+      !e.metaKey) {
+      e.preventDefault();
+      openInputOverlay();
+    }
+  });
+
+  // Restore the original title on first load
+  document.addEventListener('DOMContentLoaded', () => {
+    centerTitle.textContent = 'Title';
+  });
+
+
+  // --- Starscape: randomly scattered stars every toggle ---
+  const toggleStarscapeBtn = document.getElementById('toggle-starscape');
+  const starscapeStyleEl = document.getElementById('starscape-style');
+
+  let starscapeEnabled = false;
+
+  // Helpers
+  function randomPercent() {
+    return Math.round(Math.random() * 99) + 1; // 1–99%
+  }
+
+  function generateStarLayer(numStars, opacity, duration, xBias = 0, yBias = 0) {
+    const gradientFragments = [];
+    for (let i = 0; i < numStars; i++) {
+      const x = clamp(randomPercent() + xBias, 1, 99);
+      const y = clamp(randomPercent() + yBias, 1, 99);
+      gradientFragments.push(
+        `radial-gradient(1px 1px at ${x}% ${y}% , #ffffff 100%, transparent 0)`
+      );
+    }
+    return `
+    radial-gradient(circle at 50% 50%, #000210 0%, #000000 100%);
+    ${opacity === 1 ? "" : "background-color: #000000;"}
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: ${opacity === 1 ? -1 : -2};
+    opacity: ${opacity};
+    background: ${gradientFragments.join(",\n      ")};
+    background-size: 100% 100%;
+    transform: translate(-10px, -10px);
+    animation: parallax-stars ${duration}s linear infinite;
+  `;
+  }
+
+  function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
+  }
+
+  function generateStarscapeCSS() {
+    return `
+    .starscape::before {
+      content: "";
+      ${generateStarLayer(30, 0.75, 60)}
+    }
+    .starscape::after {
+      content: "";
+      ${generateStarLayer(40, 0.5, 40, 5, 5)}
+    }
+    @keyframes parallax-stars {
+      0% { transform: translate(-50px, -50px); }
+      100% { transform: translate(50px, 50px); }
+    }
+  `;
+  }
+
+  // Toggle
+  toggleStarscapeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    starscapeEnabled = !starscapeEnabled;
+
+    if (starscapeEnabled) {
+      document.body.classList.add('starscape');
+      toggleStarscapeBtn.textContent = 'Starscape: On';
+      // regenerate a new random star pattern
+      starscapeStyleEl.textContent = generateStarscapeCSS();
+    } else {
+      document.body.classList.remove('starscape');
+      toggleStarscapeBtn.textContent = 'Starscape: Off';
+    }
+  });
+
+</script>
+</body>
+</html>
+
+
+
+
