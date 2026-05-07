@@ -3,9 +3,7 @@
 A collection of animated HTML canvas visuals designed for use as background layers in OBS (via the **Browser** source). All files are self-contained single-page HTML — no dependencies, no build step.
  
 ---
- 
-## Files
- 
+
 ### `kaleidoscope.html`
 A symmetrical, jewel-like kaleidoscope animation built from orbiting nodes connected by filaments. Nodes glow with shifting hues and are reflected across 12 mirrored wedge segments, producing a dense, organic mandala effect.
  
