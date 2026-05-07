@@ -6,7 +6,7 @@ A collection of browser-based interactive tools designed for classroom and event
 
 ## Files
 
-### `Orbitext.html`
+### [`Orbitext.html`](https://louispeckham.github.io/html_files/Tools/Orbitext.html)
 An interactive word-orbit display where words and phrases orbit a central title on a starfield background. Words are added one at a time and orbit at randomised speeds, directions, radii, and colours.
 
 **Use cases:** Brainstorming sessions, word association activities, live audience contribution displays, lesson starter activities.
@@ -20,7 +20,7 @@ An interactive word-orbit display where words and phrases orbit a central title 
 
 ---
 
-### `Parents__Evening_Timer.html`
+### [`Parents' Evening Timer.html`](https://louispeckham.github.io/html_files/Tools/Parents'%20Evening%20Timer.html)
 A countdown timer and interval chime tool for parents' evenings and similar timed-appointment events. Shows the current time and a countdown to the next slot change, with a red overlay that fills the screen as each interval elapses.
 
 **Use cases:** Parents' evenings, speed networking, timed interview rotations, any event with fixed-length appointment slots.
