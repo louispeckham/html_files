@@ -426,7 +426,7 @@
       const surname   = trimmed.slice(i + 1);
       const initialised = surname
         .split('-')
-        .map(part => part.length > 0 ? part[0].toUpperCase() + '.' : '')
+        .map(part => part.length > 0 ? part[0].toUpperCase() : '')
         .join('-');
       return forenames + ' ' + initialised;
     }
