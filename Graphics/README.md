@@ -4,6 +4,14 @@ A collection of animated HTML canvas visuals designed for use as background laye
  
 ---
 
+### [`clouds.html`](https://louispeckham.github.io/html_files/Graphics/Background%20Visuals/clouds.html)
+A dynamic, procedural cloud simulation that drifts across a gradient sky. Built using layered radial gradients and HTML canvas filters to create soft, organic-looking cloud shapes complete with custom highlights and under-shadows. It features a built-in configuration panel for live customization.
+
+- **Interactive:** Double-click the canvas to open a customization panel adjusting colors, density, size, stretch, speed, and sharpness
+- **Style:** Serene, atmospheric sky — fully responsive and adapts immediately to slider adjustments
+- **Loop:** Infinite procedural drift with natural fading at edge boundaries
+---
+
 ### [`kaleidoscope.html`](https://louispeckham.github.io/html_files/Graphics/Background%20Visuals/kaleidoscope.html)
 A symmetrical, jewel-like kaleidoscope animation built from orbiting nodes connected by filaments. Nodes glow with shifting hues and are reflected across 12 mirrored wedge segments, producing a dense, organic mandala effect.
  
