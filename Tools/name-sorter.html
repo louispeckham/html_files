@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Name Sorter</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-page:    #f5f4f0;
+      --bg-card:    #ffffff;
+      --bg-hover:   #f1efe8;
+      --border:     #dddcd4;
+      --border-btn: #c8c7be;
+      --text-pri:   #1a1a18;
+      --text-sec:   #5f5e5a;
+      --text-muted: #888780;
+      --text-faint: #b4b2a9;
+      --confirm:    #0f6e56;
+    }
+
+    html.dark {
+      --bg-page:    #1a1a18;
+      --bg-card:    #26261f;
+      --bg-hover:   #2e2e26;
+      --border:     #3c3c34;
+      --border-btn: #4a4a40;
+      --text-pri:   #e8e7e0;
+      --text-sec:   #9e9d96;
+      --text-muted: #7a7972;
+      --text-faint: #5a5952;
+      --confirm:    #5dcaa5;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-page);
+      color: var(--text-pri);
+      min-height: 100vh;
+      padding: 2rem 1rem;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .wrap { max-width: 1100px; margin: 0 auto; }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 1.5rem;
+    }
+
+    .header-left { display: flex; align-items: center; gap: 16px; }
+    .header-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+    h1 { font-size: 22px; font-weight: 500; color: var(--text-pri); }
+
+    .dark-btn {
+      width: 34px; height: 34px;
+      border-radius: 8px;
+      border: 1px solid var(--border-btn);
+      background: transparent;
+      color: var(--text-sec);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      padding: 0;
+      transition: background 0.15s, color 0.15s;
+      flex-shrink: 0;
+    }
+    .dark-btn:hover { background: var(--bg-hover); color: var(--text-pri); }
+    .dark-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+    .toggle-label {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 14px; color: var(--text-sec);
+      cursor: pointer; user-select: none;
+    }
+    .toggle-label input { display: none; }
+
+    .pill {
+      width: 40px; height: 22px; border-radius: 11px;
+      background: var(--border-btn);
+      border: 1px solid var(--text-faint);
+      position: relative;
+      transition: background 0.2s, border-color 0.2s;
+      flex-shrink: 0;
+    }
+    .pill::after {
+      content: ''; position: absolute;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: #fff; top: 2px; left: 2px;
+      transition: left 0.2s;
+    }
+    input:checked + .pill { background: #185fa5; border-color: #0c447c; }
+    input:checked + .pill::after { left: 22px; }
+
+    .col-select-wrap {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 14px; color: var(--text-sec);
+    }
+
+    select {
+      font-size: 13px; font-family: inherit;
+      color: var(--text-pri); background: var(--bg-card);
+      border: 1px solid var(--border-btn);
+      border-radius: 8px;
+      padding: 5px 26px 5px 10px;
+      cursor: pointer;
+      transition: background 0.15s;
+      appearance: none; -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888780' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+    }
+    select:hover { background-color: var(--bg-hover); }
+
+    /* Two-panel layout */
+    .panels {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    @media (max-width: 620px) { .panels { flex-direction: column; } }
+
+    .panel-input  { flex: 0 0 280px; }
+    .panel-output { flex: 1; min-width: 0; }
+
+    .box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .box-label {
+      font-size: 11px; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.07em;
+      font-weight: 500; margin-bottom: 10px;
+    }
+
+    textarea {
+      width: 100%; min-height: 280px; resize: vertical;
+      font-size: 15px; font-family: inherit;
+      color: var(--text-pri); background: transparent;
+      border: none; outline: none; padding: 0; line-height: 1.7;
+    }
+    textarea::placeholder { color: var(--text-faint); }
+
+    /* Column textareas in the output panel */
+    .col-row {
+      display: flex;
+      gap: 8px;
+      align-items: stretch;
+    }
+
+    .col-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .col-wrap-label {
+      font-size: 11px; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.06em;
+      font-weight: 500; text-align: center;
+    }
+
+    .col-ta {
+      width: 100%;
+      flex: 1;
+      min-height: 280px;
+      resize: none;
+      font-size: 14px; font-family: inherit;
+      color: var(--text-pri);
+      background: var(--bg-page);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      outline: none;
+      padding: 8px 10px;
+      line-height: 1.7;
+      cursor: text;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .col-ta:focus { border-color: var(--text-muted); }
+
+    .actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+
+    button {
+      font-size: 13px; padding: 6px 14px;
+      border-radius: 8px; border: 1px solid var(--border-btn);
+      background: transparent; color: var(--text-pri);
+      cursor: pointer; font-family: inherit;
+      transition: background 0.15s;
+    }
+    button:hover { background: var(--bg-hover); }
+    button:active { transform: scale(0.98); }
+
+    button.primary {
+      background: var(--text-pri); color: var(--bg-page);
+      border-color: var(--text-pri);
+    }
+    button.primary:hover { opacity: 0.85; }
+
+    .count { font-size: 13px; color: var(--text-muted); margin-top: 12px; }
+
+    .copy-confirm {
+      font-size: 13px; color: var(--confirm);
+      margin-top: 10px; opacity: 0; transition: opacity 0.3s;
+    }
+    .copy-confirm.show { opacity: 1; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="header-left">
+        <h1>Name sorter</h1>
+        <button class="dark-btn" id="darkBtn" aria-label="Toggle dark mode" title="Toggle dark mode">
+          <svg id="iconSun" viewBox="0 0 24 24" style="display:none">
+            <circle cx="12" cy="12" r="4"/>
+            <line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+            <line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+          </svg>
+          <svg id="iconMoon" viewBox="0 0 24 24">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
+      </div>
+      <div class="header-right">
+        <div class="col-select-wrap">
+          <label for="colSelect">Columns</label>
+          <select id="colSelect">
+            <option value="1" selected>1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="7">7</option>
+            <option value="8">8</option>
+          </select>
+        </div>
+        <label class="toggle-label">
+          <input type="checkbox" id="lastNameToggle">
+          <span class="pill"></span>
+          <span>Sort by last name</span>
+        </label>
+      </div>
+    </header>
+
+    <div class="panels">
+      <!-- Input panel -->
+      <div class="panel-input box">
+        <div class="box-label">Input — one name per line</div>
+        <textarea id="input" placeholder="Paste or type names here&#10;&#10;e.g.&#10;Alice Johnson&#10;Tom Smith&#10;Maria Garcia" spellcheck="false"></textarea>
+        <div class="actions">
+          <button onclick="document.getElementById('input').value=''; render()">Clear</button>
+          <button onclick="loadExample()">Example</button>
+          <button onclick="initialiseLastNames()" title="Reduce each surname to its first initial. Handles hyphenated names.">Surname → initial</button>
+        </div>
+      </div>
+
+      <!-- Output panel -->
+      <div class="panel-output box">
+        <div class="box-label" id="outputLabel">Sorted A–Z</div>
+        <div class="col-row" id="colRow">
+          <!-- column textareas injected here -->
+        </div>
+        <div class="count" id="count"></div>
+        <div class="actions">
+          <button class="primary" onclick="copyAll()">Copy all</button>
+        </div>
+        <div class="copy-confirm" id="copyConfirm">Copied to clipboard!</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const inputEl     = document.getElementById('input');
+    const colRow      = document.getElementById('colRow');
+    const toggle      = document.getElementById('lastNameToggle');
+    const colSelect   = document.getElementById('colSelect');
+    const outputLabel = document.getElementById('outputLabel');
+    const countEl     = document.getElementById('count');
+    const copyConfirm = document.getElementById('copyConfirm');
+    const darkBtn     = document.getElementById('darkBtn');
+    const iconSun     = document.getElementById('iconSun');
+    const iconMoon    = document.getElementById('iconMoon');
+
+    // Dark mode
+    const saved = localStorage.getItem('ns-dark');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    let dark = saved !== null ? saved === 'true' : prefersDark;
+    applyDark(dark);
+
+    darkBtn.addEventListener('click', () => {
+      dark = !dark;
+      applyDark(dark);
+      localStorage.setItem('ns-dark', dark);
+    });
+
+    function applyDark(on) {
+      document.documentElement.classList.toggle('dark', on);
+      iconSun.style.display  = on ? 'block' : 'none';
+      iconMoon.style.display = on ? 'none'  : 'block';
+    }
+
+    // Sorting helpers
+    function getLastName(name) {
+      const trimmed = name.trim();
+      const i = trimmed.lastIndexOf(' ');
+      return i === -1 ? trimmed : trimmed.slice(i + 1);
+    }
+
+    function getSortKey(name) {
+      return toggle.checked ? getLastName(name).toLowerCase() : name.toLowerCase();
+    }
+
+    // Build column arrays from a sorted list
+    function splitIntoColumns(sorted, cols) {
+      const n = sorted.length;
+      if (cols === 1) return [sorted];
+      const bigCols  = n % cols;           // first bigCols columns get one extra name
+      const shortLen = Math.floor(n / cols);
+      const tallLen  = shortLen + (bigCols > 0 ? 1 : 0);
+      const columns  = [];
+      let cursor = 0;
+      for (let c = 0; c < cols; c++) {
+        const size = (bigCols === 0 || c < bigCols) ? tallLen : shortLen;
+        columns.push(sorted.slice(cursor, cursor + size));
+        cursor += size;
+      }
+      return columns;
+    }
+
+    function render() {
+      const lines = inputEl.value.split('\n').map(l => l.trim()).filter(Boolean);
+      const cols  = parseInt(colSelect.value, 10);
+      outputLabel.textContent = toggle.checked ? 'Sorted A–Z by last name' : 'Sorted A–Z';
+
+      if (lines.length === 0) {
+        setColumnUi([[]], cols);
+        countEl.textContent = '';
+        return;
+      }
+
+      const sorted  = [...lines].sort((a, b) => getSortKey(a).localeCompare(getSortKey(b)));
+      const columns = splitIntoColumns(sorted, cols);
+      setColumnUi(columns, cols);
+      countEl.textContent = `${sorted.length} name${sorted.length !== 1 ? 's' : ''}`;
+    }
+
+    // Rebuild the column textareas to match current data
+    function setColumnUi(columns, cols) {
+      colRow.innerHTML = '';
+      if (columns.length === 1 && columns[0].length === 0) {
+        // Empty state: show a single placeholder textarea
+        const wrap = document.createElement('div');
+        wrap.className = 'col-wrap';
+        const ta = document.createElement('textarea');
+        ta.className = 'col-ta';
+        ta.readOnly = true;
+        ta.placeholder = 'Results will appear here';
+        wrap.appendChild(ta);
+        colRow.appendChild(wrap);
+        return;
+      }
+
+      columns.forEach((col, i) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'col-wrap';
+
+        if (cols > 1) {
+          const lbl = document.createElement('div');
+          lbl.className = 'col-wrap-label';
+          lbl.textContent = `Col ${i + 1}`;
+          wrap.appendChild(lbl);
+        }
+
+        const ta = document.createElement('textarea');
+        ta.className = 'col-ta';
+        ta.readOnly = true;
+        ta.value = col.join('\n');
+        // Double-click selects all text in this column
+        ta.addEventListener('dblclick', () => { ta.select(); });
+        wrap.appendChild(ta);
+
+        colRow.appendChild(wrap);
+      });
+    }
+
+    function copyAll() {
+      const textareas = colRow.querySelectorAll('textarea');
+      if (!textareas.length || !textareas[0].value) return;
+
+      // Combine all columns tab-separated per row for a clean paste
+      const cols = parseInt(colSelect.value, 10);
+      const lines = inputEl.value.split('\n').map(l => l.trim()).filter(Boolean);
+      if (!lines.length) return;
+      const sorted  = [...lines].sort((a, b) => getSortKey(a).localeCompare(getSortKey(b)));
+      const columns = splitIntoColumns(sorted, cols);
+      const numRows = Math.max(...columns.map(c => c.length));
+      const rows = [];
+      for (let r = 0; r < numRows; r++) {
+        rows.push(columns.map(col => col[r] || '').join('\t'));
+      }
+      navigator.clipboard.writeText(rows.join('\n')).then(() => {
+        copyConfirm.classList.add('show');
+        setTimeout(() => copyConfirm.classList.remove('show'), 2000);
+      });
+    }
+
+    // Surname → initial
+    function initialiseSurname(name) {
+      const trimmed = name.trim();
+      const i = trimmed.lastIndexOf(' ');
+      if (i === -1) return trimmed;
+      const forenames = trimmed.slice(0, i);
+      const surname   = trimmed.slice(i + 1);
+      const initialised = surname
+        .split('-')
+        .map(part => part.length > 0 ? part[0].toUpperCase() + '.' : '')
+        .join('-');
+      return forenames + ' ' + initialised;
+    }
+
+    function initialiseLastNames() {
+      const lines = inputEl.value.split('\n').map(l => l.trim()).filter(Boolean);
+      if (!lines.length) return;
+      inputEl.value = lines.map(initialiseSurname).join('\n');
+      render();
+    }
+
+    function loadExample() {
+      inputEl.value = [
+        "Alice Johnson", "Tom Smith", "Maria Garcia", "James O'Brien",
+        "Sophie Williams", "Raj Patel", "Emma Thompson", "Luca Rossi",
+        "Amelia Clarke", "Dan Brown"
+      ].join('\n');
+      render();
+    }
+
+    // Init empty state
+    setColumnUi([[]], 1);
+
+    inputEl.addEventListener('input', render);
+    toggle.addEventListener('change', render);
+    colSelect.addEventListener('change', render);
+  </script>
+</body>
+</html>
