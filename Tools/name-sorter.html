@@ -248,6 +248,11 @@
           </select>
         </div>
         <label class="toggle-label">
+          <input type="checkbox" id="punctToggle">
+          <span class="pill"></span>
+          <span>Commas &amp; semicolons as breaks</span>
+        </label>
+        <label class="toggle-label">
           <input type="checkbox" id="lastNameToggle">
           <span class="pill"></span>
           <span>Sort by last name</span>
@@ -286,6 +291,7 @@
     const inputEl     = document.getElementById('input');
     const colRow      = document.getElementById('colRow');
     const toggle      = document.getElementById('lastNameToggle');
+    const punctToggle  = document.getElementById('punctToggle');
     const colSelect   = document.getElementById('colSelect');
     const outputLabel = document.getElementById('outputLabel');
     const countEl     = document.getElementById('count');
@@ -340,8 +346,17 @@
       return columns;
     }
 
+    function getLines() {
+      const raw = inputEl.value;
+      if (punctToggle.checked) {
+        // Split on newlines, commas, and semicolons; strip leading/trailing spaces from each fragment
+        return raw.split(/[\n,;]+/).map(l => l.trim()).filter(Boolean);
+      }
+      return raw.split('\n').map(l => l.trim()).filter(Boolean);
+    }
+
     function render() {
-      const lines = inputEl.value.split('\n').map(l => l.trim()).filter(Boolean);
+      const lines = getLines();
       const cols  = parseInt(colSelect.value, 10);
       outputLabel.textContent = toggle.checked ? 'Sorted A–Z by last name' : 'Sorted A–Z';
 
@@ -402,7 +417,7 @@
 
       // Combine all columns tab-separated per row for a clean paste
       const cols = parseInt(colSelect.value, 10);
-      const lines = inputEl.value.split('\n').map(l => l.trim()).filter(Boolean);
+      const lines = getLines();
       if (!lines.length) return;
       const sorted  = [...lines].sort((a, b) => getSortKey(a).localeCompare(getSortKey(b)));
       const columns = splitIntoColumns(sorted, cols);
@@ -432,7 +447,7 @@
     }
 
     function initialiseLastNames() {
-      const lines = inputEl.value.split('\n').map(l => l.trim()).filter(Boolean);
+      const lines = getLines();
       if (!lines.length) return;
       inputEl.value = lines.map(initialiseSurname).join('\n');
       render();
@@ -452,6 +467,7 @@
 
     inputEl.addEventListener('input', render);
     toggle.addEventListener('change', render);
+    punctToggle.addEventListener('change', render);
     colSelect.addEventListener('change', render);
   </script>
 </body>
