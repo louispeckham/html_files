@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lava lamp</title>
+<style>
+:root{--panel:rgba(18,16,24,.86);--ink:#eeeaf5;--muted:#9a97a6;--line:rgba(255,255,255,.14)}
+html,body{height:100%;margin:0;background:#1a0b2e;overflow:hidden;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+canvas{display:block;position:fixed;inset:0;width:100%;height:100%}
+#menu{display:none;position:fixed;top:calc(16px + env(safe-area-inset-top,0px));right:16px;width:min(280px,calc(100vw - 32px));max-height:calc(100% - 32px);overflow-y:auto;box-sizing:border-box;padding:16px 16px 4px;border-radius:14px;background:var(--panel);color:var(--ink);border:1px solid var(--line);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);font-size:14px}
+#menu.open{display:block}
+#menu label{display:grid;grid-template-columns:1fr auto;align-items:center;gap:6px 10px;margin-bottom:14px}
+#menu label input[type=range]{grid-column:1/3;width:100%;accent-color:#ff6b4a}
+#menu input[type=color]{width:40px;height:26px;padding:0;border:1px solid var(--line);border-radius:6px;background:none;cursor:pointer}
+#menu output{color:var(--muted);font-variant-numeric:tabular-nums}
+#menu button{width:100%;margin-bottom:14px;padding:8px;border-radius:8px;border:1px solid var(--line);background:rgba(255,255,255,.08);color:var(--ink);font:inherit;cursor:pointer}
+#menu button:hover{background:rgba(255,255,255,.16)}
+#menu input[type=checkbox]{width:18px;height:18px;margin:0;accent-color:#ff6b4a;cursor:pointer}
+#menu .off{opacity:.4}
+#menu .hint{margin:0 0 12px;text-align:center;color:var(--muted);font-size:12px}
+</style>
+</head>
+<body>
+<canvas id="c" aria-label="Lava lamp"></canvas>
+<div id="menu" role="dialog" aria-label="Lamp options">
+  <label>Oil colour <input type="color" id="oil"></label>
+  <label>Gradient <input type="checkbox" id="grad"></label>
+  <label id="l2">Second colour (bottom) <input type="color" id="oil2"></label>
+  <label>Animate colour <input type="checkbox" id="anim"></label>
+  <label id="las">Colour speed <output id="o_aspeed"></output><input type="range" id="aspeed" min="2" max="180" step="1"></label>
+  <label>Background <input type="color" id="bg"></label>
+  <label>Viscosity <output id="o_visc"></output><input type="range" id="visc" min="0.3" max="4" step="0.05"></label>
+  <label>Base temperature <output id="o_base"></output><input type="range" id="base" min="0" max="1.2" step="0.01"></label>
+  <label>Top temperature <output id="o_top"></output><input type="range" id="top" min="0" max="1.2" step="0.01"></label>
+  <label>Top width <output id="o_wt"></output><input type="range" id="wt" min="0.1" max="1" step="0.01"></label>
+  <label>Middle width <output id="o_wm"></output><input type="range" id="wm" min="0.1" max="1" step="0.01"></label>
+  <label>Bottom width <output id="o_wb"></output><input type="range" id="wb" min="0.1" max="1" step="0.01"></label>
+  <button id="px" type="button"></button>
+  <p class="hint">Press O to close</p>
+</div>
+<script>
+(function(){
+const cv=document.getElementById('c'),ctx=cv.getContext('2d');
+const fc=document.createElement('canvas'),fx=fc.getContext('2d');
+const S={oil:'#ff4d2e',bg:'#1a0b2e',visc:1,base:1,top:0.2,wt:0.6,wm:0.8,wb:1,chunky:true,grad:false,oil2:'#3a7bff',anim:false,aspeed:20};
+try{Object.assign(S,JSON.parse(localStorage.getItem('lava2')||'{}'))}catch(e){}
+function save(){try{localStorage.setItem('lava2',JSON.stringify(S))}catch(e){}}
+const rgb=h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];
+const mix=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);
+const sstep=(a,b,x)=>{x=Math.min(1,Math.max(0,(x-a)/(b-a)));return x*x*(3-2*x)};
+// rotate a colour around the colour wheel
+function hueRot(c,deg){
+  const r=c[0]/255,g=c[1]/255,b=c[2]/255,mx=Math.max(r,g,b),mn=Math.min(r,g,b),d=mx-mn;
+  let h=0;
+  if(d){h=mx===r?((g-b)/d)%6:mx===g?(b-r)/d+2:(r-g)/d+4;h*=60}
+  h=((h+deg)%360+360)%360;
+  const s=mx?d/mx:0,v=mx;
+  const f=n=>{const k=(n+h/60)%6;return (v-v*s*Math.max(0,Math.min(k,4-k,1)))*255};
+  return [f(5),f(3),f(1)];
+}
+// light from upper left, in front
+let LX=-0.45,LY=-0.55,LZ=0.7;{const l=Math.hypot(LX,LY,LZ);LX/=l;LY/=l;LZ/=l}
+let HX=LX,HY=LY,HZ=LZ+1;{const l=Math.hypot(HX,HY,HZ);HX/=l;HY/=l;HZ/=l}
+
+// Units: the frame is 1 tall and A wide.
+let W,H,dpr,A=1,FS=3,fw,fh,img,zArr,fArr,blobs=[],time=0,hue=0;
+
+// half-width (units) at vertical position y (0 top, 1 bottom); widths are fractions of frame width
+function hw(y){
+  const t=S.wt*A/2,m=S.wm*A/2,b=S.wb*A/2;
+  return Math.max(0.03,t*(1-y)*(1-2*y)+m*4*y*(1-y)+b*y*(2*y-1));
+}
+function count(){return Math.max(9,Math.min(30,Math.round(18*A)))}
+function resize(){
+  const oldA=A;
+  dpr=Math.min(2,window.devicePixelRatio||1);W=innerWidth;H=innerHeight;A=W/H;
+  cv.width=W*dpr;cv.height=H*dpr;
+  alloc();
+  if(blobs.length&&count()===blobs.length)blobs.forEach(b=>b.x*=A/oldA);
+  else reset();
+}
+// chunky = coarse field scaled up (retro look); smooth = much finer field
+function alloc(){
+  FS=S.chunky?Math.max(3,Math.ceil(Math.sqrt(W*H/90000))):Math.max(1,Math.ceil(Math.sqrt(W*H/600000)));
+  fw=Math.ceil(W/FS);fh=Math.ceil(H/FS);fc.width=fw;fc.height=fh;img=fx.createImageData(fw,fh);
+  zArr=new Float32Array(fw*fh);fArr=new Float32Array(fw*fh);
+}
+function reset(){
+  blobs=[];const rs=Math.min(1,0.5+A*0.6);
+  for(let i=0;i<count();i++){
+    const r=(0.04+Math.pow(Math.random(),1.6)*0.075)*rs;
+    blobs.push({x:Math.random()*A,y:Math.random()<0.6?0.85+Math.random()*0.12:0.1+Math.random()*0.7,vx:0,vy:0,r,
+      t:0.3+Math.random()*0.6,tm:0.5+Math.random()*0.1,ph:Math.random()*6.28,fq:0.04+Math.random()*0.05,k:0.7+Math.random()*0.6});
+  }
+}
+function step(dt){
+  time+=dt;if(S.anim)hue+=S.aspeed*dt;
+  const c=2*S.visc,G=0.25;
+  for(const b of blobs){
+    // heat flows in over the lower ~40% and out over the upper ~40%, both as gradients;
+    // the middle exchanges almost nothing, so oil keeps its temperature and coasts through
+    const wh=sstep(0.6,1,b.y),wc=sstep(0.4,0,b.y),K=0.4*b.k/S.visc;
+    b.t+=((S.base-b.t)*wh+(S.top-b.t)*wc)*K*dt;
+    const g=G*Math.sqrt(b.r/0.065);
+    b.vy+=(-(b.t-b.tm)*g-c*b.vy)*dt;
+    const tx=A*(0.5+0.38*Math.sin(time*b.fq+b.ph));
+    b.vx+=((tx-b.x)*0.06-c*b.vx)*dt;
+  }
+  const n=blobs.length;
+  for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){
+    const a=blobs[i],b=blobs[j],dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy),m=(a.r+b.r)*0.8;
+    if(d<m&&d>1e-4){const p=(m-d)*3*dt/d;a.vx-=dx*p;a.vy-=dy*p;b.vx+=dx*p;b.vy+=dy*p}
+  }
+  for(const b of blobs){
+    b.x+=b.vx*dt;b.y+=b.vy*dt;
+    const lo=b.r*1.1,hi=1-b.r*0.6;
+    if(b.y<lo){b.y=lo;b.vy=0}
+    if(b.y>hi){b.y=hi;b.vy=0}
+    const w=Math.max(0.01,hw(b.y)-b.r*0.5);
+    if(b.x<A/2-w){b.x=A/2-w;b.vx=0}
+    if(b.x>A/2+w){b.x=A/2+w;b.vx=0}
+  }
+}
+// Metaball field -> pseudo height map -> lit, translucent oil surface
+function field(cA,cB){
+  const n=blobs.length,bx=new Float32Array(n),by=new Float32Array(n),r2=new Float32Array(n);
+  blobs.forEach((b,i)=>{bx[i]=b.x;by[i]=b.y;r2[i]=b.r*b.r});
+  // splat each blob only over the pixels it can reach
+  fArr.fill(0);const sc=H/FS;
+  for(let k=0;k<n;k++){
+    const R=3*Math.sqrt(r2[k]),c2=9*r2[k];
+    const xa=Math.max(0,Math.floor((bx[k]-R)*sc-0.5)),xb=Math.min(fw-1,Math.ceil((bx[k]+R)*sc));
+    const ya=Math.max(0,Math.floor((by[k]-R)*sc-0.5)),yb=Math.min(fh-1,Math.ceil((by[k]+R)*sc));
+    for(let py=ya;py<=yb;py++){
+      const dy=(py+0.5)/sc-by[k],row=py*fw;
+      for(let px=xa;px<=xb;px++){
+        const dx=(px+0.5)/sc-bx[k],d2=dx*dx+dy*dy;
+        if(d2<c2)fArr[row+px]+=r2[k]/(d2+1e-6)-0.111;
+      }
+    }
+  }
+  for(let i=0;i<fArr.length;i++){const f=fArr[i];zArr[i]=f>0.95?Math.sqrt(1-0.95/f):0}
+  let p=0;
+  const d=img.data,k=0.07*H/(2*FS);
+  p=0;
+  for(let py=0;py<fh;py++){
+    const oil=mix(cA,cB,Math.min(1,(py+0.5)*FS/H)),light=mix(oil,[255,255,255],0.45);
+    for(let px=0;px<fw;px++,p++){
+      const a=sstep(0.95,1.1,fArr[p]),o=p*4;
+      if(a<=0){d[o+3]=0;continue}
+      const xl=px>0?p-1:p,xr=px<fw-1?p+1:p,yu=py>0?p-fw:p,yd=py<fh-1?p+fw:p;
+      let nx=-(zArr[xr]-zArr[xl])*k,ny=-(zArr[yd]-zArr[yu])*k;
+      const inv=1/Math.sqrt(nx*nx+ny*ny+1);nx*=inv;ny*=inv;const nz=inv;
+      const dif=Math.max(0,nx*LX+ny*LY+nz*LZ);
+      let sp=Math.max(0,nx*HX+ny*HY+nz*HZ);sp*=sp;sp*=sp;sp*=sp;sp*=sp;sp*=sp;
+      let rim=1-nz;rim*=rim;
+      // contouring only near the outside of the mass; the interior stays flat oil colour
+      const e=1-sstep(0.05,0.75,zArr[p]);
+      const base=1+(0.3+0.85*dif-1)*e,rm=rim*0.5*e,spc=255*sp*0.6*e;
+      d[o]=oil[0]*base+light[0]*rm+spc;
+      d[o+1]=oil[1]*base+light[1]*rm+spc;
+      d[o+2]=oil[2]*base+light[2]*rm+spc;
+      d[o+3]=a*255*(0.6+0.4*Math.min(1,zArr[p]*1.6));
+    }
+  }
+  fx.putImageData(img,0,0);
+}
+function shape(){
+  const n=48,cx=W/2;ctx.beginPath();
+  for(let i=0;i<=n;i++){const y=i/n,x=cx-hw(y)*H;i?ctx.lineTo(x,y*H):ctx.moveTo(x,0)}
+  for(let i=n;i>=0;i--){const y=i/n;ctx.lineTo(cx+hw(y)*H,y*H)}
+  ctx.closePath();
+}
+function render(){
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const bgc=rgb(S.bg);
+  let cA=rgb(S.oil),cB=S.grad?rgb(S.oil2):cA;
+  if(S.anim){cA=hueRot(cA,hue);cB=S.grad?hueRot(cB,hue):cA}
+  ctx.fillStyle=S.bg;ctx.fillRect(0,0,W,H);
+  field(cA,cB);
+  ctx.save();
+  shape();ctx.clip();
+  ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+  ctx.drawImage(fc,0,0,fw*FS,fh*FS);
+  ctx.restore();
+  const lum=0.299*bgc[0]+0.587*bgc[1]+0.114*bgc[2];
+  shape();ctx.lineJoin='round';ctx.lineWidth=1.5;
+  ctx.strokeStyle=lum>140?'rgba(0,0,0,.14)':'rgba(255,255,255,.13)';
+  ctx.stroke();
+}
+
+// menu
+const menu=document.getElementById('menu'),$=id=>document.getElementById(id);
+const keys=['visc','base','top','wt','wm','wb'];
+$('oil').value=S.oil;$('bg').value=S.bg;document.body.style.background=S.bg;
+$('oil').oninput=e=>{S.oil=e.target.value;save()};
+$('bg').oninput=e=>{S.bg=e.target.value;document.body.style.background=S.bg;save()};
+$('oil2').value=S.oil2;$('oil2').oninput=e=>{S.oil2=e.target.value;save()};
+const gradEl=$('grad'),animEl=$('anim'),asEl=$('aspeed'),asOut=$('o_aspeed');
+function dimmed(){
+  $('l2').classList.toggle('off',!S.grad);$('oil2').disabled=!S.grad;
+  $('las').classList.toggle('off',!S.anim);asEl.disabled=!S.anim;
+}
+gradEl.checked=S.grad;animEl.checked=S.anim;
+gradEl.onchange=()=>{S.grad=gradEl.checked;save();dimmed()};
+animEl.onchange=()=>{S.anim=animEl.checked;save();dimmed()};
+asEl.value=S.aspeed;asOut.textContent=S.aspeed+'\u00b0/s';
+asEl.oninput=()=>{S.aspeed=+asEl.value;asOut.textContent=S.aspeed+'\u00b0/s';save()};
+dimmed();
+const pxb=$('px');
+function pxLabel(){pxb.textContent='Pixel style: '+(S.chunky?'Chunky':'Smooth')}
+pxLabel();
+pxb.onclick=()=>{S.chunky=!S.chunky;save();pxLabel();alloc()};
+keys.forEach(k=>{
+  const el=$(k),out=$('o_'+k);
+  el.value=S[k];out.textContent=(+S[k]).toFixed(2);
+  el.oninput=()=>{S[k]=+el.value;out.textContent=S[k].toFixed(2);save()};
+});
+addEventListener('keydown',e=>{
+  if(e.ctrlKey||e.metaKey||e.altKey)return;
+  const k=e.key.toLowerCase();
+  if(k==='o')menu.classList.toggle('open');
+  else if(k==='escape')menu.classList.remove('open');
+});
+addEventListener('resize',resize);
+
+resize();
+let last=performance.now();
+function loop(t){
+  const dt=Math.min(0.05,(t-last)/1000);last=t;
+  step(dt);render();requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
