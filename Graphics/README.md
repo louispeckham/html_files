@@ -19,6 +19,14 @@ A symmetrical, jewel-like kaleidoscope animation built from orbiting nodes conne
 - **Style:** Deep space, saturated gemstone colours
 - **Loop:** 40-second seamless cycle
 ---
+
+### [`Lava lamp.html`](https://louispeckham.github.io/html_files/Graphics/Background%20Visuals/Lava%20lamp.html)
+A full-frame lava lamp with no glass or base, just blobs of translucent oil rising and sinking against a flat background, with a faint outline marking the edge of the area. The oil is a real heat-driven simulation: it warms and rises at the bottom, cools and sinks at the top, and merges and pinches apart as it goes. The bottom pool is made of the same blobs, so it moves like the rest. Edges have a soft 3D contour while the centre of each blob stays flat, oil-like colour.
+
+- **Interactive:** Press **O** to open an options menu for oil and background colour, an optional two-colour gradient (top to bottom), animated colour cycling with speed control, viscosity, base and top temperature, and top / middle / bottom width to reshape the area. Settings are remembered
+- **Style:** Soft, glowing, organic — switch between a chunky retro pixel look and a smooth high-resolution look
+- **Loop:** Endless, non-repeating simulation (no fixed cycle)
+---
  
 ### [`liquidlightshow.html`](https://louispeckham.github.io/html_files/Graphics/Background%20Visuals/liquidlightshow.html)
 A lava-lamp style light show using CSS `blur` + `contrast` filters to produce smooth, blobby organic shapes that bleed and merge together. Inspired by classic 1960s liquid light projectors.
